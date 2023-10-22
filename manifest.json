@@ -1,0 +1,12 @@
+{
+	"name": "DutFrame",
+	"description": "엔이에서 작품 홍보를 iframe 형식으로 볼 수 있게 하는 확프",
+	"version": "0.0",
+	"manifest_version": 3,
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["view.js"]
+		}
+	]
+}
