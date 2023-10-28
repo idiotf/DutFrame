@@ -251,6 +251,103 @@ async function FAVProject(url) {
 		return fetch("/graphql", finalObj);
 	}
 }
+function naverMe2Link(naverMeLink) {
+	return new Promise(function(resolve, reject) {
+		var iframe = document.createElement("iframe");
+		iframe.src = naverMeLink;
+		iframe.style.visibility = "hidden";
+		iframe.style.position = "fixed";
+		iframe.style.left = "-9999px";
+		document.body.appendChild(iframe);
+		iframe.contentWindow.fetch = null;
+		iframe.addEventListener("load", function() {
+			try {
+				resolve(iframe.contentWindow.location.href);
+			} catch(e) {
+				reject(e);
+			} finally {
+				document.body.removeChild(iframe);
+			}
+		});
+	});
+}
+async function addIFrame(detail, match, errorMsg) {
+	function resize() {
+		iframe.width = detail.offsetWidth;
+		iframe.height = detail.offsetWidth * (9 / 16) + 48;
+	}
+	const iframe = document.createElement("iframe");
+	iframe.src = match[0].replace("project", "iframe");
+	iframe.frameBorder = 0;
+	setInterval(function() {
+		try {
+			const head = iframe.contentDocument.head;
+			if(!head) throw errorMsg;
+			if(head.querySelector("#exp-style")) return;
+			const style = document.createElement("style");
+			style.id = "exp-style";
+			style.textContent = ".entryMaximizeButtonMinimize { display: none } .css-13694u8 { right: 60px !important }";
+			head.appendChild(style);
+		} catch(e) {}
+	});
+	setInterval(function() {
+		try {
+			const button = iframe.contentDocument.querySelector(".entryRunButtonBigMinimize");
+			if(button.className.includes("view-apply")) return;
+			function addViews() {
+				updateViewCount(match[0].match(/[0-9a-f]{24}/i)[0]);
+			}
+			button.addEventListener("click", addViews);
+			button.className += " view-apply";
+		} catch(e) {}
+	});
+	const likeButton = document.createElement("div");
+	likeButton.style.float = "left";
+	likeButton.style.cursor = "pointer";
+	const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
+	if(isLiked) {
+		likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
+	} else {
+		likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
+	}
+	likeButton.style.width = likeButton.style.height = "40px";
+	likeButton.addEventListener("click", async function() {
+		await likeProject(match[0].match(/[0-9a-f]{24}/i)[0]);
+		const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
+		if(isLiked) {
+			likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
+		} else {
+			likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
+		}
+	});
+
+	const bookmarkButton = document.createElement("div");
+	bookmarkButton.style.float = "left";
+	bookmarkButton.style.cursor = "pointer";
+	const isFAV_ = await isFAV(match[0].match(/[0-9a-f]{24}/i)[0]);
+	if(isFAV_) {
+		bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMarkHover.svg) no-repeat center / contain";
+	} else {
+		bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
+	}
+	bookmarkButton.style.width = bookmarkButton.style.height = "40px";
+	bookmarkButton.style.marginLeft = "10px";
+	bookmarkButton.addEventListener("click", async function() {
+		await FAVProject(match[0].match(/[0-9a-f]{24}/i)[0]);
+		const isFAV_ = await isFAV(match[0].match(/[0-9a-f]{24}/i)[0]);
+		if(isFAV_) {
+			bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMarkHover.svg) no-repeat center / contain";
+		} else {
+			bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
+		}
+	});
+
+	addEventListener("resize", resize);
+	resize();
+	detail.appendChild(iframe);
+	detail.appendChild(likeButton);
+	detail.appendChild(bookmarkButton);
+}
 setTimeout(async function frame() {
 	"use strict";
 	const allEntryStory = document.getElementsByClassName("eelonj20");
@@ -258,79 +355,27 @@ setTimeout(async function frame() {
 	for(const entryStory of allEntryStory) {
 		if(entryStory.querySelector("iframe")) continue; // iframe이 이미 있으면 건너뜀.
 		const detail = entryStory.querySelector(".e1i41bku1");
-		const match = detail.textContent.match(/https:\/\/playentry\.org\/project\/[0-9a-f]{24}/i);
-		if(match) {
-			function resize() {
-				iframe.width = detail.offsetWidth;
-				iframe.height = detail.offsetWidth * (9 / 16) + 48;
-			}
-			const iframe = document.createElement("iframe");
-			iframe.src = match[0].replace("project", "iframe");
-			iframe.frameBorder = 0;
-			setInterval(function() {
-				try {
-					const head = iframe.contentDocument.head;
-					if(!head) throw errorMsg;
-					if(head.querySelector("#exp-style")) return;
-					const style = document.createElement("style");
-					style.id = "exp-style";
-					style.textContent = ".entryMaximizeButtonMinimize { display: none } .css-13694u8 { right: 60px !important }";
-					head.appendChild(style);
-				} catch(e) {}
-			});
-			setInterval(function() {
-				try {
-					const button = iframe.contentDocument.querySelector(".entryRunButtonBigMinimize");
-					if(button.className.includes("view-apply")) return;
-					function addViews() {
-						updateViewCount(match[0].match(/[0-9a-f]{24}/i)[0]);
-					}
-					button.addEventListener("click", addViews);
-					button.className += " view-apply";
-				} catch(e) {}
-			});
-			const likeButton = document.createElement("div");
-			likeButton.style.float = "left";
-			likeButton.style.cursor = "pointer";
-			const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
-			if(isLiked) {
-				likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
-			} else {
-				likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
-			}
-			likeButton.style.width = likeButton.style.height = "40px";
-			likeButton.addEventListener("click", async function() {
-				await likeProject(match[0].match(/[0-9a-f]{24}/i)[0]);
-				const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
-				if(isLiked) {
-					likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
-				} else {
-					likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
-				}
-			});
-
-			const bookmarkButton = document.createElement("div");
-			bookmarkButton.style.float = "left";
-			bookmarkButton.style.cursor = "pointer";
-			bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
-			bookmarkButton.style.width = bookmarkButton.style.height = "40px";
-			bookmarkButton.style.marginLeft = "10px";
-			bookmarkButton.addEventListener("click", async function() {
-				await FAVProject(match[0].match(/[0-9a-f]{24}/i)[0]);
-				const isFAV_ = await isFAV(match[0].match(/[0-9a-f]{24}/i)[0]);
-				if(isFAV_) {
-					bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMarkHover.svg) no-repeat center / contain";
-				} else {
-					bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
-				}
-			});
-
-			addEventListener("resize", resize);
-			resize();
-			detail.appendChild(iframe);
-			detail.appendChild(likeButton);
-			detail.appendChild(bookmarkButton);
+		const match = detail.textContent.replace("http://", "https://").match(/https:\/\/naver\.me\/\w{8}/i);
+		if(match && !detail.className.includes("loading")) {
+			detail.classList.add("loading");
+			(async function() {
+				const link = await naverMe2Link(match[0]);
+				if(link.includes("project")) await addIFrame(detail, [link], errorMsg);
+			}());
 		}
+	}
+	setTimeout(frame);
+});
+
+setTimeout(async function frame() {
+	"use strict";
+	const allEntryStory = document.getElementsByClassName("eelonj20");
+	const errorMsg = "페이지 로딩이 되지 않음";
+	for(const entryStory of allEntryStory) {
+		if(entryStory.querySelector("iframe")) continue; // iframe이 이미 있으면 건너뜀.
+		const detail = entryStory.querySelector(".e1i41bku1");
+		const match = detail.textContent.replace("http://", "https://").match(/https:\/\/playentry\.org\/project\/[0-9a-f]{24}/i);
+		if(match) await addIFrame(detail, match, errorMsg);
 	}
 	setTimeout(frame);
 });
