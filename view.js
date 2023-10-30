@@ -251,6 +251,7 @@ async function FAVProject(url) {
 		return fetch("/graphql", finalObj);
 	}
 }
+/* 취약점 문제로 인해 코드 삭제 *
 function naverMe2Link(naverMeLink) {
 	return new Promise(function(resolve, reject) {
 		var iframe = document.createElement("iframe");
@@ -270,7 +271,7 @@ function naverMe2Link(naverMeLink) {
 			}
 		});
 	});
-}
+}*/
 async function addIFrame(detail, match, errorMsg) {
 	function resize() {
 		iframe.width = detail.offsetWidth;
@@ -347,7 +348,7 @@ async function addIFrame(detail, match, errorMsg) {
 	detail.appendChild(iframe);
 	detail.appendChild(likeButton);
 	detail.appendChild(bookmarkButton);
-}
+}/*
 setTimeout(async function frame() {
 	"use strict";
 	const allEntryStory = document.getElementsByClassName("eelonj20");
@@ -366,7 +367,7 @@ setTimeout(async function frame() {
 	}
 	setTimeout(frame);
 });
-
+*/
 setTimeout(async function frame() {
 	"use strict";
 	const allEntryStory = document.getElementsByClassName("eelonj20");
