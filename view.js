@@ -1,9 +1,40 @@
-function updateViewCount(url) {
-	function getIdeal() {
-		const next_data = document.getElementById("__NEXT_DATA__");
-		const json = JSON.parse(next_data.innerText);
-		return {csrf: json.props.initialProps.csrfToken, xToken: json.props.initialState.common.user.xToken};
+function send(query, variables) { // graphql로 POST 요청을 보내는 함수
+	function getIdeal() {           // 대충 csrf와 xToken을 구하는 함수
+		const next_data = document.getElementById("__NEXT_DATA__"); // json 정보가 담긴 스크립트
+		const object = JSON.parse(next_data.innerText);             // json을 자바스크립트 객체로 변환
+		return {
+			csrf: object.props.initialProps.csrfToken,            // csrf
+			xToken: object.props.initialState.common.user?.xToken, // xToken
+		};
 	}
+	const body = JSON.stringify({ query, variables }); // body 작성
+	const {csrf, xToken} = getIdeal(); // csrf, xToken 구하기
+	const headers = { // 헤더 작성
+		"Content-Type": "application/json",
+		"CSRF-Token": csrf,
+		"x-token": xToken,
+		"x-client-type": "Client"
+	};
+	const finalObj = {
+		body,
+		headers,
+		method: "POST"
+	};
+	return fetch("/graphql", finalObj); // POST 요청 보내기
+}
+function getLikeAndFAVCnt(id) {
+	const query = `
+		query SELECT_PROJECT_LITE($id: ID! $groupId: ID) {
+			project(id: $id, groupId: $groupId) {
+				likeCnt
+				favorite
+      			}
+		}
+	`;
+	const variables = { id };
+	return send(query, variables).then(v => v.json()).then(v => v.data.project);
+}
+function updateViewCount(url) { // 조회수 늘리기
 	const query = `
 		mutation UPDATE_VIEWCOUNT(
 			$target: ID!, $targetSubject: String, $groupId: ID
@@ -16,33 +47,13 @@ function updateViewCount(url) {
 			}
 		}
 	`;
-	const body = JSON.stringify({
-		query,
-		variables: {
-			target: url,
-			targetSubject: "project"
-		}
-	});
-	const {csrf, xToken} = getIdeal();
-	const headers = {
-		"Content-Type": "application/json",
-		"CSRF-Token": csrf,
-		"x-token": xToken,
-		"x-client-type": "Client"
+	const variables = {
+		target: url,
+		targetSubject: "project"
 	};
-	const finalObj = {
-		body,
-		headers,
-		method: "POST"
-	};
-	return fetch("/graphql", finalObj);
+	return send(query, variables);
 }
-async function isLike(url) {
-	function getIdeal() {
-		const next_data = document.getElementById("__NEXT_DATA__");
-		const json = JSON.parse(next_data.innerText);
-		return {csrf: json.props.initialProps.csrfToken, xToken: json.props.initialState.common.user.xToken};
-	}
+function isLike(url) {
 	const query = `
 		query CHECK_LIKE($target: String!, $groupId: ID){
 			checkLike(target: $target, groupId: $groupId) {
@@ -50,38 +61,19 @@ async function isLike(url) {
 			}
 		}
 	`;
-	const body = JSON.stringify({
-		query,
-		variables: {
-			target: url,
-			targetSubject: "project",
-			targetType: "individual"
-		}
-	});
-	const {csrf, xToken} = getIdeal();
-	const headers = {
-		"Content-Type": "application/json",
-		"CSRF-Token": csrf,
-		"x-token": xToken,
-		"x-client-type": "Client"
+	const variables = {
+		target: url,
+		targetSubject: "project",
+		targetType: "individual"
 	};
-	const finalObj = {
-		body,
-		headers,
-		method: "POST"
-	};
-	const isLiked = await fetch("/graphql", finalObj).then(v => v.json()).then(v => v.data.checkLike.isLike);
+	const isLiked = send(query, variables).then(v => v.json()).then(v => v.data.checkLike?.isLike);
 	return isLiked;
 }
 async function likeProject(url) {
-	function getIdeal() {
-		const next_data = document.getElementById("__NEXT_DATA__");
-		const json = JSON.parse(next_data.innerText);
-		return {csrf: json.props.initialProps.csrfToken, xToken: json.props.initialState.common.user.xToken};
-	}
 	const isLiked = await isLike(url);
+	let query, variables;
 	if(isLiked) {
-		const query = `
+		query = `
 			mutation UNLIKE($target: String, $groupId: ID) {
 				unlike(target: $target, groupId: $groupId) {
 					target
@@ -90,29 +82,13 @@ async function likeProject(url) {
 				}
 			}
 		`;
-		const body = JSON.stringify({
-			query,
-			variables: {
-				target: url,
-				targetSubject: "project",
-				targetType: "individual"
-			}
-		});
-		const {csrf, xToken} = getIdeal();
-		const headers = {
-			"Content-Type": "application/json",
-			"CSRF-Token": csrf,
-			"x-token": xToken,
-			"x-client-type": "Client"
+		variables = {
+			target: url,
+			targetSubject: "project",
+			targetType: "individual"
 		};
-		const finalObj = {
-			body,
-			headers,
-			method: "POST"
-		};
-		return fetch("/graphql", finalObj);
 	} else {
-		const query = `
+		query = `
 			mutation LIKE($target: String, $targetSubject: String, $targetType: String, $groupId: ID) {
 				like(target: $target, targetSubject: $targetSubject, targetType: $targetType, groupId: $groupId) {
 					target
@@ -121,35 +97,15 @@ async function likeProject(url) {
 				}
 			}
 		`;
-		const body = JSON.stringify({
-			query,
-			variables: {
-				target: url,
-				targetSubject: "project",
-				targetType: "individual"
-			}
-		});
-		const {csrf, xToken} = getIdeal();
-		const headers = {
-			"Content-Type": "application/json",
-			"CSRF-Token": csrf,
-			"x-token": xToken,
-			"x-client-type": "Client"
+		variables = {
+			target: url,
+			targetSubject: "project",
+			targetType: "individual"
 		};
-		const finalObj = {
-			body,
-			headers,
-			method: "POST"
-		};
-		return fetch("/graphql", finalObj);
-	}
+	};
+	return send(query, variables);
 }
-async function isFAV(url) {
-	function getIdeal() {
-		const next_data = document.getElementById("__NEXT_DATA__");
-		const json = JSON.parse(next_data.innerText);
-		return {csrf: json.props.initialProps.csrfToken, xToken: json.props.initialState.common.user.xToken};
-	}
+function isFAV(url) {
 	const query = `
 		query CHECK_FAV($target: String!, $groupId: ID){
 			checkFav(target: $target, groupId: $groupId) {
@@ -157,38 +113,19 @@ async function isFAV(url) {
 			}
 		}
 	`;
-	const body = JSON.stringify({
-		query,
-		variables: {
-			target: url,
-			targetSubject: "project",
-			targetType: "individual"
-		}
-	});
-	const {csrf, xToken} = getIdeal();
-	const headers = {
-		"Content-Type": "application/json",
-		"CSRF-Token": csrf,
-		"x-token": xToken,
-		"x-client-type": "Client"
+	const variables = {
+		target: url,
+		targetSubject: "project",
+		targetType: "individual"
 	};
-	const finalObj = {
-		body,
-		headers,
-		method: "POST"
-	};
-	const isFAV_ = await fetch("/graphql", finalObj).then(v => v.json()).then(v => v.data.checkFav.isFavorite);
+	const isFAV_ = send(query, variables).then(v => v.json()).then(v => v.data.checkFav?.isFavorite);
 	return isFAV_;
 }
 async function FAVProject(url) {
-	function getIdeal() {
-		const next_data = document.getElementById("__NEXT_DATA__");
-		const json = JSON.parse(next_data.innerText);
-		return {csrf: json.props.initialProps.csrfToken, xToken: json.props.initialState.common.user.xToken};
-	}
 	const isFAV_ = await isFAV(url);
+	let query, variables;
 	if(isFAV_) {
-		const query = `
+		query = `
 			mutation UNFAV($target: String, $groupId: ID) {
 				unfav(target: $target, groupId: $groupId) {
 					target
@@ -197,29 +134,13 @@ async function FAVProject(url) {
 				}
 			}
 		`;
-		const body = JSON.stringify({
-			query,
-			variables: {
-				target: url,
-				targetSubject: "project",
-				targetType: "individual"
-			}
-		});
-		const {csrf, xToken} = getIdeal();
-		const headers = {
-			"Content-Type": "application/json",
-			"CSRF-Token": csrf,
-			"x-token": xToken,
-			"x-client-type": "Client"
+		variables = {
+			target: url,
+			targetSubject: "project",
+			targetType: "individual"
 		};
-		const finalObj = {
-			body,
-			headers,
-			method: "POST"
-		};
-		return fetch("/graphql", finalObj);
 	} else {
-		const query = `
+		query = `
 			mutation FAV($target: String, $targetSubject: String, $targetType: String, $groupId: ID) {
 				fav(target: $target, targetSubject: $targetSubject, targetType: $targetType, groupId: $groupId) {
 					target
@@ -228,50 +149,14 @@ async function FAVProject(url) {
 				}
 			}
 		`;
-		const body = JSON.stringify({
-			query,
-			variables: {
-				target: url,
-				targetSubject: "project",
-				targetType: "individual"
-			}
-		});
-		const {csrf, xToken} = getIdeal();
-		const headers = {
-			"Content-Type": "application/json",
-			"CSRF-Token": csrf,
-			"x-token": xToken,
-			"x-client-type": "Client"
+		variables = {
+			target: url,
+			targetSubject: "project",
+			targetType: "individual"
 		};
-		const finalObj = {
-			body,
-			headers,
-			method: "POST"
-		};
-		return fetch("/graphql", finalObj);
-	}
+	};
+	return send(query, variables);
 }
-/* 취약점 문제로 인해 코드 삭제 *
-function naverMe2Link(naverMeLink) {
-	return new Promise(function(resolve, reject) {
-		var iframe = document.createElement("iframe");
-		iframe.src = naverMeLink;
-		iframe.style.visibility = "hidden";
-		iframe.style.position = "fixed";
-		iframe.style.left = "-9999px";
-		document.body.appendChild(iframe);
-		iframe.contentWindow.fetch = null;
-		iframe.addEventListener("load", function() {
-			try {
-				resolve(iframe.contentWindow.location.href);
-			} catch(e) {
-				reject(e);
-			} finally {
-				document.body.removeChild(iframe);
-			}
-		});
-	});
-}*/
 async function addIFrame(detail, match, errorMsg) {
 	function resize() {
 		iframe.width = detail.offsetWidth;
@@ -299,75 +184,90 @@ async function addIFrame(detail, match, errorMsg) {
 				updateViewCount(match[0].match(/[0-9a-f]{24}/i)[0]);
 			}
 			button.addEventListener("click", addViews);
-			button.className += " view-apply";
+			button.classList.add("view-apply");
 		} catch(e) {}
 	});
-	const likeButton = document.createElement("div");
-	likeButton.style.float = "left";
-	likeButton.style.cursor = "pointer";
-	const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
-	if(isLiked) {
-		likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
-	} else {
-		likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
+	if(!document.getElementById("dut-frame-stylesheet")) {
+		const stylesheet = document.createElement("style");
+		stylesheet.id = "dut-frame-stylesheet";
+		stylesheet.textContent = `
+			.dut-frame-button {
+				float: left;
+				cursor: pointer;
+				width: 40px;
+				height: 40px;
+			}
+
+			.bookmark-button {
+				margin-left: 10px;
+			}
+
+			.like-button::before {
+				display: block;
+				line-height: 40px;
+				text-align: center;
+				content: attr(like-cnt);
+			}
+
+			.bookmark-button::before {
+				display: block;
+				line-height: 30px;
+				text-align: center;
+				content: attr(bookmark-cnt);
+			}
+		`;
+		document.head.appendChild(stylesheet);
 	}
-	likeButton.style.width = likeButton.style.height = "40px";
-	likeButton.addEventListener("click", async function() {
-		await likeProject(match[0].match(/[0-9a-f]{24}/i)[0]);
+	const likeButton = document.createElement("div");
+	(async function() {
+		likeButton.classList.add("dut-frame-button", "like-button");
 		const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
 		if(isLiked) {
 			likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
 		} else {
 			likeButton.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
 		}
-	});
+		likeButton.setAttribute("like-cnt", (await getLikeAndFAVCnt(match[0].match(/[0-9a-f]{24}/i)[0])).likeCnt);
+		likeButton.addEventListener("click", async function() {
+			await likeProject(match[0].match(/[0-9a-f]{24}/i)[0]);
+			const isLiked = await isLike(match[0].match(/[0-9a-f]{24}/i)[0]);
+			if(isLiked) {
+				this.style.background = "url(https://playentry.org/img/IcoFnBtnLikeHover.svg) no-repeat center / contain";
+			} else {
+				this.style.background = "url(https://playentry.org/img/IcoFnBtnLike.svg) no-repeat center / contain";
+			}
+			this.setAttribute("like-cnt", (await getLikeAndFAVCnt(match[0].match(/[0-9a-f]{24}/i)[0])).likeCnt);
+		});
+	}());
 
 	const bookmarkButton = document.createElement("div");
-	bookmarkButton.style.float = "left";
-	bookmarkButton.style.cursor = "pointer";
-	const isFAV_ = await isFAV(match[0].match(/[0-9a-f]{24}/i)[0]);
-	if(isFAV_) {
-		bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMarkHover.svg) no-repeat center / contain";
-	} else {
-		bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
-	}
-	bookmarkButton.style.width = bookmarkButton.style.height = "40px";
-	bookmarkButton.style.marginLeft = "10px";
-	bookmarkButton.addEventListener("click", async function() {
-		await FAVProject(match[0].match(/[0-9a-f]{24}/i)[0]);
+	(async function() {
+		bookmarkButton.classList.add("dut-frame-button", "bookmark-button");
 		const isFAV_ = await isFAV(match[0].match(/[0-9a-f]{24}/i)[0]);
 		if(isFAV_) {
 			bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMarkHover.svg) no-repeat center / contain";
 		} else {
 			bookmarkButton.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
 		}
-	});
+		bookmarkButton.setAttribute("bookmark-cnt", (await getLikeAndFAVCnt(match[0].match(/[0-9a-f]{24}/i)[0])).favorite);
+		bookmarkButton.addEventListener("click", async function() {
+			await FAVProject(match[0].match(/[0-9a-f]{24}/i)[0]);
+			const isFAV_ = await isFAV(match[0].match(/[0-9a-f]{24}/i)[0]);
+			if(isFAV_) {
+				this.style.background = "url(https://playentry.org/img/IcoFnBtnBookMarkHover.svg) no-repeat center / contain";
+			} else {
+				this.style.background = "url(https://playentry.org/img/IcoFnBtnBookMark.svg) no-repeat center / contain";
+			}
+			this.setAttribute("bookmark-cnt", (await getLikeAndFAVCnt(match[0].match(/[0-9a-f]{24}/i)[0])).favorite);
+		});
+	}());
 
 	addEventListener("resize", resize);
 	resize();
 	detail.appendChild(iframe);
 	detail.appendChild(likeButton);
 	detail.appendChild(bookmarkButton);
-}/*
-setTimeout(async function frame() {
-	"use strict";
-	const allEntryStory = document.getElementsByClassName("eelonj20");
-	const errorMsg = "페이지 로딩이 되지 않음";
-	for(const entryStory of allEntryStory) {
-		if(entryStory.querySelector("iframe")) continue; // iframe이 이미 있으면 건너뜀.
-		const detail = entryStory.querySelector(".e1i41bku1");
-		const match = detail.textContent.replace("http://", "https://").match(/https:\/\/naver\.me\/\w{8}/i);
-		if(match && !detail.className.includes("loading")) {
-			detail.classList.add("loading");
-			(async function() {
-				const link = await naverMe2Link(match[0]);
-				if(link.includes("project")) await addIFrame(detail, [link], errorMsg);
-			}());
-		}
-	}
-	setTimeout(frame);
-});
-*/
+}
 setTimeout(async function frame() {
 	"use strict";
 	const allEntryStory = document.getElementsByClassName("eelonj20");
